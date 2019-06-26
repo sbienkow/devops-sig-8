@@ -2,6 +2,7 @@
 import falcon
 import threading
 import time
+import yaml
 
 global_config_lock = threading.Lock()
 config = { 'magic_word': 'abc' }
@@ -27,8 +28,31 @@ def dummy_config_changer():
     print("Thread %s: finishing")
 
 
+def filewatcher_config_changer():
+    path = '/etc/app/config.yaml'
+    try:
+        open(path, 'r')
+    except FileNotFoundError:
+        pass
+    while True:
+        time.sleep(1)
+        try:
+            cfg_file = open(path, 'r')
+            new_cfg = yaml.load(cfg_file)
+            if new_cfg != config:
+                print('GCL locking')
+                with global_config_lock:
+                    config.clear()
+                    config.update(new_cfg)
+                print('GCL unlocking')
+        except FileNotFoundError as e:
+            print('exc')
+    print("Thread %s: finishing")
+
+
 config_changers = {
-    'dummy_config_changer': dummy_config_changer
+    'dummy_config_changer': dummy_config_changer,
+    'filewatcher_config_changer': filewatcher_config_changer
 }
 
 
@@ -48,7 +72,7 @@ class TimeResource:
     def on_get(self, req, resp):
         resp.media = int(time.time())
 
-config_changer = 'dummy_config_changer'
+config_changer = 'filewatcher_config_changer'
 config_changer_thread = threading.Thread(target=config_changers[config_changer])
 config_changer_thread.start()
 api = falcon.API()
