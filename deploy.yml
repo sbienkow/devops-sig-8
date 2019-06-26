@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-sig-8
+  labels:
+    app: devops-sig-8
+  annotations:
+    reloader.stakater.com/auto: "true"
+    configmap.reloader.stakater.com/reload: "devops-sig-8-configmap"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devops-sig-8
+  template:
+    metadata:
+      labels:
+        app: devops-sig-8
+    spec:
+      containers:
+        - name: devops-sig-8
+          image: devops-sig-8:v3
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - mountPath: /etc/app
+              name: config-volume
+      volumes:
+        - name: config-volume
+          configMap:
+            name: devops-sig-8-configmap
